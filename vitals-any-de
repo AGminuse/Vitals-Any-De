@@ -1,0 +1,183 @@
+#!/usr/bin/python
+# to do :add colores 
+
+from collections.abc import ItemsView
+import psutil as ps
+import math,time
+import os,sys
+
+old_net_data = [ps.net_io_counters()[0], ps.net_io_counters()[1]]
+old_disk_data = [0, 0]
+mode=0
+emojes=["🔷","🐟","🔺","🔻","👀","✍"]
+valid=[""]
+def get_cpu():
+    return emojes[0]+" " + ps.cpu_percent().__str__() + " %"
+
+
+def get_memory():
+    return (
+        " "
+        +emojes[1]
+        + str(
+            round(
+                (ps.virtual_memory().used + ps.virtual_memory().buffers) / 1073741824, 2
+            )
+        )
+        + " GB"
+    )
+
+
+def get_network():
+    data = ps.net_io_counters()
+    send_usage = math.floor((data[0] - old_net_data[0]) / 1000)
+    download_usage = math.floor((data[1] - old_net_data[1]) / 1000)
+    old_net_data[0] = data[0]
+    old_net_data[1] = data[1]
+    send_unite = "KB"
+    download_unite = "KB"
+    if send_usage > 1000:
+        send_usage = math.ceil(send_usage / 1000)
+        send_unite = "MB"
+    if download_usage > 1000:
+        download_usage = math.ceil(download_usage / 1000)
+        download_unite = "MB"
+    return (
+        emojes[2]
+        + str(send_usage)
+        + send_unite
+        + "  "
+        + emojes[3]
+        + str(download_usage)
+        + download_unite
+    )
+
+
+def get_disk_read_write():
+    data = ps.disk_io_counters()
+    if data is None:
+        return "0,0"
+    else:
+        read_usage = math.floor((data[2] - old_disk_data[0]) / 1000)
+        write_usage = math.floor((data[3] - old_disk_data[1]) / 1000)
+        old_disk_data[0] = data[2]
+        old_disk_data[1] = data[3]
+        send_unite = "KB"
+        download_unite = "KB"
+        if read_usage > 1000:
+            read_usage = math.ceil(read_usage / 1000)
+            send_unite = "MB"
+        if write_usage > 1000:
+            write_usage = math.ceil(write_usage / 1000)
+            download_unite = "MB"
+        return (
+            " "
+            + emojes[4]
+            + str(read_usage)
+            + send_unite
+            + "  "
+            + emojes[5]
+            + str(write_usage)
+            + download_unite
+        )
+
+
+def get_disk_usage():
+    data = ps.disk_io_counters()
+    if data is None:
+        return "0,0"
+    else:
+        read_usage = math.floor((data[2] - old_disk_data[0]) / 1000)
+        write_usage = math.floor((data[3] - old_disk_data[1]) / 1000)
+        old_disk_data[0] = data[2]
+        old_disk_data[1] = data[3]
+        usage = read_usage + write_usage
+        usage_unite = "KB"
+
+        if usage > 1000:
+            usage = math.ceil(usage / 1000)
+            usage_unite = "MB"
+        if read_usage > write_usage:
+            status = emojes[4]
+        else:
+            status = emojes[5]
+        return status + str(usage) + usage_unite
+
+def mode1():
+    while True:
+        #os.system("clear")
+        print(
+            get_cpu() + " " + get_memory() + " " + get_network() + " " + get_disk_usage()
+            )
+        time.sleep(1.5)
+def mode2():
+    while True: 
+        open("/tmp/vitals-any-de", "w").write(
+            get_cpu() + " " + get_memory() + " " + get_network() + " " + get_disk_usage()
+            )
+        time.sleep(1.5)
+
+
+
+def set_emojes(index):
+    valid[0]=sys.argv[index+2]
+    if valid[0].__len__() != 6 :
+        print("you must provide 6 emojes :>")
+        exit()
+    else:
+        for index,emoje in enumerate(sys.argv[index+2]):
+            emojes[index]=emoje
+
+def null():
+    return ""
+
+def print_help():
+    print("""Usage : vitals-any-de [Options] [Data]
+        Options: ----------------
+                -v changing to mode 1 
+                --no-disk remove disk from the output
+                --no-cpu   remove cpu from the output
+                --no-memory  remove memory from the output
+                --no-network  remove network from the output
+                --no-emojes  remove emojes from the output
+                --set-emojes  [Data] setting the emojes to the output manually should be 6 emojes 
+                --separate-disk-usage  show the read and write usage separately
+                -h --help
+    """)
+    exit()
+if __name__ == "__main__":
+    for idx,item in enumerate(sys.argv[1:]):
+        match item:
+            case "-v" :
+                mode=1
+            case "-h":
+                print_help()
+            case "--help":
+                print_help()
+            case "--no-disk":
+                get_disk_usage=null
+            case "--no-cpu":
+                get_cpu=null
+            case "--no-network":
+                get_network=null    
+            case "--no-memory":
+                get_memory=null
+            case "--no-emojes":
+                emojes=["","","","","",""]
+            case "--set-emojes":
+                set_emojes(idx)
+            case "--separate-disk-usage":
+                get_disk_usage=get_disk_read_write
+            case item :
+                if item not in valid:
+                    print(item+" is not recognized as an option try -h or --help for help ")
+                    exit()
+    if mode ==1:
+        mode1()
+    else:
+        mode2()
+
+
+
+
+
